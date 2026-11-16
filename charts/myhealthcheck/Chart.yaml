@@ -1,0 +1,25 @@
+apiVersion: v2
+name: myhealthcheck
+description: >-
+  Health check system that monitors the availability of other applications,
+  with Kubernetes service discovery, Prometheus metrics, JSON logs and OpenTelemetry traces.
+type: application
+# Chart version (SemVer). Bump on every change of the chart.
+version: 1.0.0
+# Version of the application (Docker image tag used by default).
+appVersion: "3.0.0"
+kubeVersion: ">=1.30.0-0"
+home: https://github.com/aeciopires/myhealthcheck
+sources:
+  - https://github.com/aeciopires/myhealthcheck
+keywords:
+  - healthcheck
+  - monitoring
+  - availability
+  - service-discovery
+maintainers:
+  - name: aeciopires
+    url: https://github.com/aeciopires
+annotations:
+  # This chart requires Helm 4 (enforced in templates/_helpers.tpl).
+  helm.sh/minimum-version: "4.0.0"

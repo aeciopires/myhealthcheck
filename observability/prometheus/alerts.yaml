@@ -1,0 +1,33 @@
+# Example alerting rules based on myhealthcheck metrics.
+groups:
+  - name: myhealthcheck
+    rules:
+      - alert: TargetDown
+        expr: myhealthcheck_target_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.name }} ({{ $labels.namespace }}) is down"
+          description: "Target {{ $labels.target }} ({{ $labels.source }}) has been failing for 2 minutes."
+      - alert: TargetDegraded
+        expr: myhealthcheck_target_status{status="degraded"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.name }} is slow"
+          description: "Target {{ $labels.target }} answers slower than RESPONSE_TIME_THRESHOLD."
+      - alert: MyHealthCheckStale
+        expr: time() - myhealthcheck_last_check_cycle_timestamp_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "myhealthcheck has not finished a check cycle for 10 minutes"
+      - alert: KubernetesDiscoveryFailing
+        expr: increase(myhealthcheck_discovery_runs_total{result="error"}[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "myhealthcheck cannot discover Kubernetes services"

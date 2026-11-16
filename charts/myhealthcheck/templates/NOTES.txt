@@ -1,0 +1,36 @@
+myhealthcheck {{ include "myhealthcheck.imageTag" . }} was deployed as "{{ include "myhealthcheck.fullname" . }}" in namespace "{{ .Release.Namespace }}".
+
+{{- if .Values.config.discovery.enabled }}
+Kubernetes discovery: ON
+  namespaces: {{ default "all" (include "myhealthcheck.csv" .Values.config.discovery.namespaces) }}
+  excluded:   {{ default "none" (include "myhealthcheck.csv" .Values.config.discovery.excludeNamespaces) }}
+  ports:      {{ default "all" (include "myhealthcheck.csv" .Values.config.discovery.ports) }}
+{{- else }}
+Kubernetes discovery: OFF (only static targets are checked)
+{{- end }}
+
+1. Open the API / Swagger UI:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}docs
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "myhealthcheck.fullname" . }})
+  export NODE_IP=$(kubectl get nodes -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT/docs
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "myhealthcheck.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}/docs
+{{- else }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "myhealthcheck.fullname" . }} 8000:{{ .Values.service.port }}
+  open http://127.0.0.1:8000/docs
+{{- end }}
+
+2. List the monitored systems and their status:
+  curl -s http://127.0.0.1:8000/api/v1/targets
+
+3. Logs are JSON:
+  kubectl --namespace {{ .Release.Namespace }} logs -l app.kubernetes.io/instance={{ .Release.Name }} -f

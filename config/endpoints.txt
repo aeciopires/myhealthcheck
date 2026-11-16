@@ -1,0 +1,4 @@
+# Legacy/plain format: one endpoint per line (protocol://host:port/endpoint).
+# The short form protocol:host:port/endpoint is accepted as well.
+http://kube-pires:3000/readyz
+http:localhost:8000/status

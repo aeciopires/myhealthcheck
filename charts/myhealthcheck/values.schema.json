@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "myhealthcheck values",
+  "type": "object",
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "image": {
+      "type": "object",
+      "required": ["repository"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
+        "tag": { "type": "string" }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "clusterWide": { "type": "boolean" }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "logLevel": { "type": "string", "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "interval": { "type": "number", "minimum": 1 },
+            "requestTimeout": { "type": "number", "exclusiveMinimum": 0 },
+            "responseTimeThreshold": { "type": "number", "exclusiveMinimum": 0 },
+            "retryAttempts": { "type": "integer", "minimum": 1, "maximum": 10 },
+            "retryDelay": { "type": "number", "minimum": 0 },
+            "maxConcurrency": { "type": "integer", "minimum": 1 },
+            "verifyTls": { "type": "boolean" },
+            "defaultHealthPaths": { "type": "array", "items": { "type": "string" } },
+            "expectedStatusCodes": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 100, "maximum": 599 }
+            }
+          }
+        },
+        "healthEndpoints": { "type": "array", "items": { "type": "string" } },
+        "targets": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "url": { "type": "string" },
+                  "paths": { "type": "array", "items": { "type": "string" } },
+                  "match": { "type": "string", "enum": ["any", "all"] },
+                  "expected_status": { "type": "array", "items": { "type": "integer" } },
+                  "expected_body": { "type": "string" },
+                  "timeout": { "type": "number" },
+                  "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+                },
+                "anyOf": [{ "required": ["url"] }, { "required": ["base_url"] }]
+              }
+            ]
+          }
+        },
+        "discovery": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "namespaces": { "type": "array", "items": { "type": "string" } },
+            "excludeNamespaces": { "type": "array", "items": { "type": "string" } },
+            "ports": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  { "type": "integer", "minimum": 1, "maximum": 65535 },
+                  { "type": "string", "enum": ["*", "all"] }
+                ]
+              }
+            },
+            "labelSelector": { "type": "string" },
+            "requireAnnotation": { "type": "boolean" },
+            "interval": { "type": "number", "minimum": 5 },
+            "scheme": { "type": "string", "enum": ["http", "https"] },
+            "serviceDomain": { "type": "string", "minLength": 1 }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "properties": { "historyRetention": { "type": "integer", "minimum": 1 } }
+        },
+        "tracing": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "endpoint": { "type": "string" },
+            "serviceName": { "type": "string" }
+          }
+        },
+        "alerting": {
+          "type": "object",
+          "properties": {
+            "webhookUrl": { "type": "string" },
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "existingClaim": { "type": "string" },
+        "storageClass": { "type": "string" },
+        "accessModes": { "type": "array", "items": { "type": "string" } },
+        "size": { "type": "string" }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    }
+  }
+}

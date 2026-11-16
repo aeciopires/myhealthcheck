@@ -1,0 +1,53 @@
+{{- $cfg := .Values.config -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "myhealthcheck.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "myhealthcheck.labels" . | nindent 4 }}
+data:
+  # ---- environment variables (see docs/configuration.md)
+  HTTP_PORT: {{ .Values.service.port | quote }}
+  LOG_LEVEL: {{ $cfg.logLevel | quote }}
+  CHECK_INTERVAL: {{ $cfg.checks.interval | quote }}
+  REQUEST_TIMEOUT: {{ $cfg.checks.requestTimeout | quote }}
+  RESPONSE_TIME_THRESHOLD: {{ $cfg.checks.responseTimeThreshold | quote }}
+  RETRY_ATTEMPTS: {{ $cfg.checks.retryAttempts | quote }}
+  RETRY_DELAY: {{ $cfg.checks.retryDelay | quote }}
+  MAX_CONCURRENCY: {{ $cfg.checks.maxConcurrency | quote }}
+  VERIFY_TLS: {{ $cfg.checks.verifyTls | quote }}
+  {{- with $cfg.checks.defaultHealthPaths }}
+  DEFAULT_HEALTH_PATHS: {{ include "myhealthcheck.csv" . | quote }}
+  {{- end }}
+  {{- with $cfg.checks.expectedStatusCodes }}
+  EXPECTED_STATUS_CODES: {{ include "myhealthcheck.csv" . | quote }}
+  {{- end }}
+  {{- with $cfg.healthEndpoints }}
+  HEALTH_ENDPOINTS: {{ include "myhealthcheck.csv" . | quote }}
+  {{- end }}
+  TARGETS_FILE: /app/config/targets.yaml
+  DISCOVERY_ENABLED: {{ $cfg.discovery.enabled | quote }}
+  DISCOVERY_NAMESPACES: {{ include "myhealthcheck.csv" $cfg.discovery.namespaces | quote }}
+  DISCOVERY_EXCLUDE_NAMESPACES: {{ include "myhealthcheck.csv" $cfg.discovery.excludeNamespaces | quote }}
+  DISCOVERY_PORTS: {{ include "myhealthcheck.csv" $cfg.discovery.ports | quote }}
+  DISCOVERY_LABEL_SELECTOR: {{ $cfg.discovery.labelSelector | quote }}
+  DISCOVERY_REQUIRE_ANNOTATION: {{ $cfg.discovery.requireAnnotation | quote }}
+  DISCOVERY_INTERVAL: {{ $cfg.discovery.interval | quote }}
+  DISCOVERY_SCHEME: {{ $cfg.discovery.scheme | quote }}
+  DISCOVERY_SERVICE_DOMAIN: {{ $cfg.discovery.serviceDomain | quote }}
+  K8S_IN_CLUSTER: "true"
+  DB_PATH: /data/myhealthcheck.db
+  HISTORY_RETENTION: {{ $cfg.storage.historyRetention | quote }}
+  OTEL_ENABLED: {{ $cfg.tracing.enabled | quote }}
+  OTEL_SERVICE_NAME: {{ $cfg.tracing.serviceName | quote }}
+  {{- with $cfg.tracing.endpoint }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ . | quote }}
+  {{- end }}
+  # ---- static targets file
+  targets.yaml: |
+    {{- if $cfg.targets }}
+    {{- toYaml (dict "targets" $cfg.targets) | nindent 4 }}
+    {{- else }}
+    targets: []
+    {{- end }}

@@ -1,0 +1,44 @@
+{{- if .Values.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "myhealthcheck.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "myhealthcheck.labels" . | nindent 4 }}
+    {{- with .Values.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: myhealthcheck
+      rules:
+        - alert: TargetDown
+          expr: myhealthcheck_target_up == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ "{{" }} $labels.name {{ "}}" }} ({{ "{{" }} $labels.namespace {{ "}}" }}) is down"
+            description: "Target {{ "{{" }} $labels.target {{ "}}" }} has been failing for 2 minutes."
+        - alert: TargetDegraded
+          expr: myhealthcheck_target_status{status="degraded"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ "{{" }} $labels.name {{ "}}" }} is slow"
+        - alert: MyHealthCheckStale
+          expr: time() - myhealthcheck_last_check_cycle_timestamp_seconds > {{ mul 10 .Values.config.checks.interval }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "myhealthcheck has not finished a check cycle for a long time"
+        - alert: KubernetesDiscoveryFailing
+          expr: increase(myhealthcheck_discovery_runs_total{result="error"}[15m]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "myhealthcheck cannot discover Kubernetes services"
+{{- end }}

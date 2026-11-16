@@ -1,0 +1,53 @@
+# Static targets monitored by myhealthcheck (TARGETS_FILE / --targets-file).
+#
+# Each target is a "system". Fields:
+#   name             display name (default: host:port of the URL)
+#   url              base URL or full URL. Accepted forms:
+#                      protocol://host:port/endpoint
+#                      protocol:host:port/endpoint
+#                      host:port                    (http assumed)
+#   paths            health paths; empty = path of the URL or DEFAULT_HEALTH_PATHS
+#   match            any (default): healthy if at least one path answers
+#                    all: healthy only if every path answers
+#   expected_status  accepted status codes; empty = any 2xx/3xx
+#   expected_body    substring that must appear in the body
+#   timeout          per-request timeout in seconds
+#   labels           free key/value pairs
+#
+# "defaults" are merged into every target.
+
+defaults:
+  timeout: 5
+
+targets:
+  # kube-pires 2.0.0 demo application; check readiness before routing traffic.
+  - name: kube-pires
+    url: http://kube-pires:3000
+    paths: [/readyz]
+    expected_body: '"status":"ready"'
+    labels:
+      team: demo
+
+  # The observability stack of docker-compose monitors itself:
+  - name: prometheus
+    url: http://prometheus:9090
+    paths: [/-/healthy, /-/ready]
+    match: all
+  - name: grafana
+    url: http://grafana:3000/api/health
+  - name: loki
+    url: http:loki:3100/ready
+  - name: tempo
+    url: http://tempo:3200/ready
+  - name: jaeger
+    url: http://jaeger:16686
+    paths: [/]
+  - name: alloy
+    url: http://alloy:12345/-/ready
+
+  # No path given: DEFAULT_HEALTH_PATHS are probed in order (/status, /health, ...)
+  - name: myhealthcheck-self
+    url: http://localhost:8000
+
+  # Plain URLs are accepted too:
+  - http:prometheus:9090/-/healthy

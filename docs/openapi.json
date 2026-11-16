@@ -1,0 +1,1368 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "myhealthcheck",
+    "description": "Monitors the availability of other applications using static targets and Kubernetes service discovery. Prometheus metrics on `/metrics`.",
+    "license": {
+      "name": "GPL-3.0",
+      "url": "https://www.gnu.org/licenses/gpl-3.0.html"
+    },
+    "version": "3.0.0"
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness probe",
+        "description": "The process is running and the event loop answers.",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Readiness probe",
+        "description": "Ready once the first check cycle finished and the storage answers.",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Not ready yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Status (alias of /health)",
+        "description": "Backwards compatible endpoint of the 2.x releases (same as liveness).",
+        "operationId": "health_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health (legacy alias)",
+        "description": "Backwards compatible endpoint of the 2.x releases (same as liveness).",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Prometheus metrics",
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain; version=1.0.0; charset=utf-8": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/targets": {
+      "get": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "List targets",
+        "description": "List every monitored system with its endpoints and latest status.",
+        "operationId": "list_targets_api_v1_targets_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Status"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Source"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Namespace"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TargetState"
+                  },
+                  "title": "Response List Targets Api V1 Targets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Register a target",
+        "description": "Register a system to be monitored (stored with ``source=api``).",
+        "operationId": "create_target_api_v1_targets_post",
+        "parameters": [
+          {
+            "name": "check_now",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Run a check right away",
+              "default": true,
+              "title": "Check Now"
+            },
+            "description": "Run a check right away"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/targets/{target_id}": {
+      "get": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Get a target",
+        "operationId": "get_target_api_v1_targets__target_id__get",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Remove a target",
+        "description": "Stop monitoring a target. Discovered or static targets come back on the\nnext discovery run / restart if they are still declared.",
+        "operationId": "delete_target_api_v1_targets__target_id__delete",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Target not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/targets/{target_id}/history": {
+      "get": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Check history of a target",
+        "operationId": "target_history_api_v1_targets__target_id__history_get",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TargetCheck"
+                  },
+                  "title": "Response Target History Api V1 Targets  Target Id  History Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/targets/{target_id}/check": {
+      "post": {
+        "tags": [
+          "checks"
+        ],
+        "summary": "Check one target now",
+        "operationId": "check_target_api_v1_targets__target_id__check_post",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/checks": {
+      "post": {
+        "tags": [
+          "checks"
+        ],
+        "summary": "Run a check cycle",
+        "description": "Check every target now, without waiting for the next interval.",
+        "operationId": "run_checks_api_v1_checks_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/probe": {
+      "post": {
+        "tags": [
+          "checks"
+        ],
+        "summary": "Ad-hoc check (not stored)",
+        "description": "Check any URL once and return the result without registering it.",
+        "operationId": "probe_api_v1_probe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/discovery": {
+      "post": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Run Kubernetes discovery",
+        "operationId": "run_discovery_api_v1_discovery_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveryResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Discovery disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Kubernetes API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/summary": {
+      "get": {
+        "tags": [
+          "info"
+        ],
+        "summary": "Overall status",
+        "operationId": "summary_api_v1_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config": {
+      "get": {
+        "tags": [
+          "info"
+        ],
+        "summary": "Effective configuration",
+        "description": "Effective settings (secrets are masked).",
+        "operationId": "config_api_v1_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CheckRunResponse": {
+        "properties": {
+          "checked": {
+            "type": "integer",
+            "title": "Checked"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TargetCheck"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked",
+          "results"
+        ],
+        "title": "CheckRunResponse"
+      },
+      "ConfigResponse": {
+        "properties": {
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "settings"
+        ],
+        "title": "ConfigResponse"
+      },
+      "DiscoveryResponse": {
+        "properties": {
+          "discovered": {
+            "type": "integer",
+            "title": "Discovered"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "discovered",
+          "finished_at"
+        ],
+        "title": "DiscoveryResponse"
+      },
+      "EndpointResult": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          },
+          "response_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Time",
+            "description": "Seconds of the last attempt."
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts",
+            "default": 1
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "path",
+          "status"
+        ],
+        "title": "EndpointResult",
+        "description": "Outcome of checking one URL (after retries)."
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "examples": [
+              "ok"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Checks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "HealthResponse"
+      },
+      "MatchMode": {
+        "type": "string",
+        "enum": [
+          "any",
+          "all"
+        ],
+        "title": "MatchMode",
+        "description": "How the endpoint results of a target are combined."
+      },
+      "Source": {
+        "type": "string",
+        "enum": [
+          "static",
+          "kubernetes",
+          "api"
+        ],
+        "title": "Source",
+        "description": "Where a target definition came from."
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "up",
+          "degraded",
+          "down",
+          "unknown"
+        ],
+        "title": "Status",
+        "description": "Health status of an endpoint or a target."
+      },
+      "SummaryResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Status"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Source"
+          },
+          "storage_backend": {
+            "type": "string",
+            "title": "Storage Backend"
+          },
+          "storage_location": {
+            "type": "string",
+            "title": "Storage Location"
+          },
+          "discovery_enabled": {
+            "type": "boolean",
+            "title": "Discovery Enabled"
+          },
+          "last_cycle_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Cycle At"
+          },
+          "last_discovery_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Discovery At"
+          },
+          "last_discovery_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Discovery Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "by_status",
+          "by_source",
+          "storage_backend",
+          "storage_location",
+          "discovery_enabled",
+          "last_cycle_at",
+          "last_discovery_at",
+          "last_discovery_error"
+        ],
+        "title": "SummaryResponse"
+      },
+      "TargetCheck": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/EndpointResult"
+            },
+            "type": "array",
+            "title": "Endpoints"
+          },
+          "matched_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Path"
+          },
+          "response_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Time"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_id",
+          "status",
+          "endpoints"
+        ],
+        "title": "TargetCheck",
+        "description": "Outcome of checking every relevant endpoint of a target."
+      },
+      "TargetCreate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 253
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Display name. Defaults to host:port of the URL."
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Base URL or full URL of the system. Accepted forms: `protocol://host:port/endpoint`, `protocol:host:port/endpoint`, `host:port`.",
+            "examples": [
+              "http://kube-pires:3000/health",
+              "http:10.0.0.5:8080/status"
+            ]
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paths",
+            "description": "Health paths. Empty: the path of `url`, or the default paths."
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchMode",
+            "default": "any"
+          },
+          "expected_status": {
+            "items": {
+              "type": "integer",
+              "maximum": 599.0,
+              "minimum": 100.0
+            },
+            "type": "array",
+            "title": "Expected Status"
+          },
+          "expected_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Body"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Labels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "TargetCreate",
+        "description": "Body of ``POST /api/v1/targets`` and ``POST /api/v1/probe``."
+      },
+      "TargetSpec": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 253,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "kube-pires"
+            ]
+          },
+          "base_url": {
+            "type": "string",
+            "title": "Base Url",
+            "examples": [
+              "http://kube-pires:3000"
+            ]
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paths",
+            "description": "Health paths to check. Empty means the default health paths.",
+            "examples": [
+              [
+                "/health"
+              ]
+            ]
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchMode",
+            "default": "any"
+          },
+          "expected_status": {
+            "items": {
+              "type": "integer",
+              "maximum": 599.0,
+              "minimum": 100.0
+            },
+            "type": "array",
+            "title": "Expected Status",
+            "description": "Accepted HTTP status codes. Empty means any 2xx or 3xx."
+          },
+          "expected_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Body",
+            "description": "Substring that must be present in the response body."
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout",
+            "description": "Per-request timeout in seconds."
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source",
+            "default": "static"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Labels"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable identifier, unique per source/namespace/name.",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "base_url",
+          "id"
+        ],
+        "title": "TargetSpec",
+        "description": "Definition of a monitored system (what to check, not its state)."
+      },
+      "TargetState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "base_url": {
+            "type": "string",
+            "title": "Base Url"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paths"
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchMode"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Labels"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status",
+            "default": "unknown"
+          },
+          "matched_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Path"
+          },
+          "response_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Time"
+          },
+          "last_checked": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked"
+          },
+          "last_change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Change"
+          },
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/EndpointResult"
+            },
+            "type": "array",
+            "title": "Endpoints"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/TargetSpec"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "source",
+          "namespace",
+          "base_url",
+          "paths",
+          "match",
+          "spec"
+        ],
+        "title": "TargetState",
+        "description": "Target definition plus its latest known state (what the API returns)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "targets",
+      "description": "Monitored systems, their endpoints and status."
+    },
+    {
+      "name": "checks",
+      "description": "Trigger health checks on demand."
+    },
+    {
+      "name": "discovery",
+      "description": "Kubernetes service discovery."
+    },
+    {
+      "name": "info",
+      "description": "Summary and effective configuration."
+    },
+    {
+      "name": "health",
+      "description": "Probes and metrics of myhealthcheck itself."
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+# Local stack: myhealthcheck + demo app + full observability (metrics, logs, traces).
+#
+#   make up        # or: docker compose up --build -d
+#
+# URLs:
+#   myhealthcheck API/Swagger  http://localhost:8000/docs
+#   Grafana                    http://localhost:3000   (anonymous admin)
+#   Prometheus                 http://localhost:9090
+#   Jaeger UI                  http://localhost:16686
+#   Alloy UI                   http://localhost:12345
+#   Loki API                   http://localhost:3100
+#   Tempo API                  http://localhost:3200
+#   kube-pires (demo target)   http://localhost:3001
+#
+# Host ports can be changed with env vars (MHC_PORT, GRAFANA_PORT, PROMETHEUS_PORT,
+# JAEGER_PORT, LOKI_PORT, TEMPO_PORT, ALLOY_PORT, OTLP_GRPC_PORT, OTLP_HTTP_PORT,
+# KUBE_PIRES_PORT), e.g.:  GRAFANA_PORT=3300 docker compose up -d
+
+name: myhealthcheck
+
+x-restart: &restart
+  restart: unless-stopped
+  networks: [mynet]
+
+services:
+  myhealthcheck:
+    <<: *restart
+    container_name: myhealthcheck
+    build:
+      context: .
+      args:
+        VERSION: "3.0.0"
+    image: aeciopires/myhealthcheck:3.0.0
+    environment:
+      LOG_LEVEL: INFO
+      CHECK_INTERVAL: "60"
+      TARGETS_FILE: /app/config/targets.yaml
+      DB_PATH: /data/myhealthcheck.db
+      OTEL_ENABLED: "true"
+      OTEL_SERVICE_NAME: myhealthcheck
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+    volumes:
+      - ./config/targets.yaml:/app/config/targets.yaml:ro
+      - myhealthcheck-data:/data
+    ports:
+      - "${MHC_PORT:-8000}:8000"
+    depends_on:
+      kube-pires:
+        condition: service_started
+      alloy:
+        condition: service_started
+
+  kube-pires:
+    <<: *restart
+    container_name: kube-pires
+    image: aeciopires/kube-pires:2.0.0
+    ports:
+      - "${KUBE_PIRES_PORT:-3001}:3000"
+
+  # ------------------------------------------------------------ observability
+  alloy:
+    <<: *restart
+    container_name: alloy
+    image: grafana/alloy:v1.22.0
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${ALLOY_PORT:-12345}:12345"
+      - "${OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+    depends_on: [loki, tempo, jaeger]
+
+  loki:
+    <<: *restart
+    container_name: loki
+    image: grafana/loki:3.7.10
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+
+  tempo:
+    <<: *restart
+    container_name: tempo
+    image: grafana/tempo:3.1.1
+    user: "10001"
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"
+
+  jaeger:
+    <<: *restart
+    container_name: jaeger
+    image: jaegertracing/jaeger:2.23.0
+    ports:
+      - "${JAEGER_PORT:-16686}:16686"
+
+  prometheus:
+    <<: *restart
+    container_name: prometheus
+    image: prom/prometheus:v3.16.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-remote-write-receiver
+      - --web.enable-lifecycle
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./observability/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./observability/prometheus/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  grafana:
+    <<: *restart
+    container_name: grafana
+    image: grafana/grafana:13.3.1
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/myhealthcheck.json
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./charts/myhealthcheck/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on: [prometheus, loki, tempo, jaeger]
+
+networks:
+  mynet:
+    driver: bridge
+
+volumes:
+  myhealthcheck-data:
+  loki-data:
+  tempo-data:
+  prometheus-data:
+  grafana-data:

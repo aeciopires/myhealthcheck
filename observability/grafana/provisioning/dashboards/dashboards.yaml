@@ -1,0 +1,12 @@
+# Loads the dashboards shipped with the Helm chart (single source of truth).
+apiVersion: 1
+
+providers:
+  - name: myhealthcheck
+    folder: myhealthcheck
+    type: file
+    disableDeletion: false
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

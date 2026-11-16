@@ -1,0 +1,267 @@
+# Default values for myhealthcheck.
+# Comments starting with "# --" are rendered in README.md by helm-docs (make helm-docs).
+
+# -- Number of replicas. Every replica checks every target, so keep 1 unless you want redundancy.
+replicaCount: 1
+
+image:
+  # -- Container image repository
+  repository: aeciopires/myhealthcheck
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag. Defaults to the chart `appVersion`.
+  tag: ""
+
+# -- Secrets to pull images from private registries
+imagePullSecrets: []
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full resource names
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create a ServiceAccount
+  create: true
+  # -- Mount the ServiceAccount token (required by Kubernetes discovery)
+  automount: true
+  # -- ServiceAccount annotations
+  annotations: {}
+  # -- ServiceAccount name. Generated from the fullname when empty.
+  name: ""
+
+rbac:
+  # -- Create the RBAC objects needed by Kubernetes discovery (read-only: get/list/watch on services and namespaces)
+  create: true
+  # -- `true`: ClusterRole/ClusterRoleBinding (needed to discover all namespaces or glob patterns).
+  # `false`: one Role/RoleBinding per namespace listed in `config.discovery.namespaces`.
+  clusterWide: true
+
+config:
+  # -- Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL). Logs are always JSON.
+  logLevel: INFO
+
+  checks:
+    # -- Seconds between two check cycles
+    interval: 60
+    # -- Per-request timeout in seconds
+    requestTimeout: 5
+    # -- Answers slower than this (seconds) mark the target as "degraded"
+    responseTimeThreshold: 3
+    # -- Attempts per endpoint. Only network errors, timeouts and 5xx are retried.
+    retryAttempts: 3
+    # -- Seconds between retries
+    retryDelay: 2
+    # -- Maximum number of targets checked at the same time
+    maxConcurrency: 50
+    # -- Verify TLS certificates of https targets
+    verifyTls: true
+    # -- Health paths probed when a target has no paths. Empty = application defaults
+    # (/status, /health, /healthz, /livez, /readyz, /ready, /ping, /-/healthy, /-/ready, /api/health, ...).
+    defaultHealthPaths: []
+    # -- Accepted status codes. Empty = any 2xx/3xx.
+    expectedStatusCodes: []
+
+  # -- Static endpoints, one URL each (`protocol://host:port/endpoint` or `protocol:host:port/endpoint`).
+  healthEndpoints: []
+  # - http://my-app.default.svc:8080/health
+  # - https:10.0.0.5:8443/status
+
+  # -- Structured static targets (rendered into targets.yaml). See config/targets.yaml in the repository.
+  targets: []
+  # - name: my-api
+  #   url: http://my-api.apps.svc:8080
+  #   paths: [/live, /ready]
+  #   match: all
+  #   expected_status: [200]
+
+  discovery:
+    # -- Enable Kubernetes service discovery
+    enabled: true
+    # -- Namespaces to scan (globs allowed, e.g. `team-*`). Empty = all namespaces.
+    namespaces: []
+    # -- Namespaces to skip (globs allowed)
+    excludeNamespaces:
+      - kube-system
+      - kube-public
+      - kube-node-lease
+    # -- Service ports checked. Use `["*"]` for every TCP port.
+    # A service can opt in to another port with the annotation `myhealthcheck.io/port`.
+    ports: [80, 8080, 8888]
+    # -- Only services matching this label selector, e.g. `app.kubernetes.io/part-of=shop`
+    labelSelector: ""
+    # -- Only services annotated with `myhealthcheck.io/enabled: "true"` are checked
+    requireAnnotation: false
+    # -- Seconds between discovery runs
+    interval: 300
+    # -- Scheme used for discovered services (http or https)
+    scheme: http
+    # -- DNS suffix after `<service>.<namespace>.` (e.g. `svc` or `svc.cluster.local`)
+    serviceDomain: svc
+
+  storage:
+    # -- Number of history entries kept per target
+    historyRetention: 100
+
+  tracing:
+    # -- Export OpenTelemetry traces (OTLP/HTTP)
+    enabled: false
+    # -- OTLP endpoint, e.g. `http://alloy.monitoring.svc:4318` or `http://tempo.monitoring.svc:4318`
+    endpoint: ""
+    # -- service.name of the spans
+    serviceName: myhealthcheck
+
+  alerting:
+    # -- Webhook that receives a JSON POST on every status change. Stored in a Secret.
+    webhookUrl: ""
+    # -- Use an existing Secret instead of `webhookUrl`
+    existingSecret: ""
+    # -- Key of the webhook URL inside `existingSecret`
+    existingSecretKey: webhook-url
+
+# -- Extra environment variables for the container
+extraEnv: []
+# -- Extra `envFrom` sources (ConfigMaps/Secrets)
+extraEnvFrom: []
+
+persistence:
+  # -- Keep the SQLite database on a PersistentVolumeClaim. When disabled an emptyDir is used
+  # (history is lost when the pod is recreated).
+  enabled: false
+  # -- Use an existing PVC
+  existingClaim: ""
+  # -- StorageClass of the PVC (empty = cluster default)
+  storageClass: ""
+  # -- Access modes of the PVC
+  accessModes:
+    - ReadWriteOnce
+  # -- Size of the PVC
+  size: 1Gi
+
+# -- Pod annotations
+podAnnotations: {}
+# -- Pod labels
+podLabels: {}
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Container resources
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port (also the container port)
+  port: 8000
+  # -- Service annotations
+  annotations: {}
+
+ingress:
+  # -- Expose the API/Swagger through an Ingress
+  enabled: false
+  # -- IngressClass name
+  className: ""
+  # -- Ingress annotations
+  annotations: {}
+  # -- Ingress hosts
+  hosts:
+    - host: myhealthcheck.local
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS
+  tls: []
+
+# -- Liveness probe (process alive)
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Readiness probe (first check cycle finished and storage OK)
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Startup probe (gives time for the first check cycle)
+startupProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  periodSeconds: 5
+  failureThreshold: 30
+
+autoscaling:
+  # -- Enable HPA (each replica checks every target)
+  enabled: false
+  # -- Minimum replicas
+  minReplicas: 1
+  # -- Maximum replicas
+  maxReplicas: 3
+  # -- Target CPU utilization
+  targetCPUUtilizationPercentage: 80
+  # -- Target memory utilization
+  targetMemoryUtilizationPercentage: ""
+
+serviceMonitor:
+  # -- Create a ServiceMonitor (Prometheus Operator)
+  enabled: false
+  # -- Scrape interval
+  interval: 30s
+  # -- Scrape timeout
+  scrapeTimeout: 10s
+  # -- Extra labels (e.g. `release: kube-prometheus-stack`)
+  labels: {}
+
+prometheusRule:
+  # -- Create a PrometheusRule with alerts (Prometheus Operator)
+  enabled: false
+  # -- Extra labels (e.g. `release: kube-prometheus-stack`)
+  labels: {}
+
+grafanaDashboard:
+  # -- Create a ConfigMap with the Grafana dashboard (picked up by the Grafana sidecar)
+  enabled: false
+  # -- Namespace of the ConfigMap (empty = release namespace)
+  namespace: ""
+  # -- Labels watched by the Grafana sidecar
+  labels:
+    grafana_dashboard: "1"
+  # -- Annotations (e.g. the folder used by the sidecar)
+  annotations:
+    grafana_folder: myhealthcheck
+
+# -- Node selector
+nodeSelector: {}
+# -- Tolerations
+tolerations: []
+# -- Affinity
+affinity: {}
