@@ -2,6 +2,7 @@
 
 <!-- TOC -->
 
+- [myhealthcheck](#myhealthcheck)
 - [About](#about)
 - [Features](#features)
 - [Quick start](#quick-start)
@@ -12,6 +13,7 @@
 - [Configuration in 30 seconds](#configuration-in-30-seconds)
 - [Make targets](#make-targets)
 - [Documentation](#documentation)
+- [Developer](#developer)
 - [License](#license)
 
 <!-- TOC -->
@@ -139,6 +141,10 @@ make openapi         # export docs/openapi.json
 * [charts/myhealthcheck/README.md](charts/myhealthcheck/README.md) - Helm chart.
 * [CHANGELOG.md](CHANGELOG.md) - release notes.
 * [CLAUDE.md](CLAUDE.md) - maintenance notes for AI assistants and humans.
+
+# Developer
+
+- Aécio Pires [https://linktr.ee/aeciopires](https://linktr.ee/aeciopires)
 
 # License
 
